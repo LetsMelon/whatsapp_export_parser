@@ -24,7 +24,10 @@ impl Chat {
                 if input.len() == 0 {
                     Ok(chat)
                 } else {
-                    eprintln!("The input.len() should be zero, couldn't parsed: {input:?}");
+                    eprintln!(
+                        "The input.len() should be zero, couldn't parsed: {:?}",
+                        String::from_utf8_lossy(input)
+                    );
                     Err(())
                 }
             }
