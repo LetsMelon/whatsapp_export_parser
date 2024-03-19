@@ -58,3 +58,26 @@ impl Timestamp {
         (hour, minutes, seconds)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+
+    use crate::timestamp::Timestamp;
+    use crate::SIMPLE_TEST_MESSAGE;
+
+    #[test]
+    fn just_works() {
+        let (input, ts) = Timestamp::parse(SIMPLE_TEST_MESSAGE).unwrap();
+        assert_eq!(input, b" LetsMelon: Hello World!");
+        assert_eq!(
+            ts,
+            Timestamp {
+                inner: NaiveDateTime::new(
+                    NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
+                    NaiveTime::from_hms_opt(1, 2, 3).unwrap()
+                )
+            }
+        )
+    }
+}

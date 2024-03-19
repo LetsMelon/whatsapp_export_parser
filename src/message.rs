@@ -58,3 +58,78 @@ impl Message {
         &self.message_type
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+
+    use crate::chat_participant::ChatParticipant;
+    use crate::message::Message;
+    use crate::message_type::MessageType;
+    use crate::timestamp::Timestamp;
+    use crate::SIMPLE_TEST_MESSAGE;
+
+    #[test]
+    fn parse_one_line() {
+        let (input, message) = Message::parse(SIMPLE_TEST_MESSAGE).unwrap();
+        assert_eq!(input, b"");
+        assert_eq!(
+            message,
+            Message {
+                timestamp: Timestamp {
+                    inner: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
+                        NaiveTime::from_hms_opt(1, 2, 3).unwrap()
+                    )
+                },
+                sender: ChatParticipant {
+                    name: "LetsMelon".to_string()
+                },
+                message_type: MessageType::Text("Hello World!".to_string())
+            }
+        );
+    }
+
+    #[test]
+    fn parse_multiple_lines() {
+        let mut buffer = [0; SIMPLE_TEST_MESSAGE.len() * 2 + 1];
+        buffer[..SIMPLE_TEST_MESSAGE.len()].copy_from_slice(SIMPLE_TEST_MESSAGE);
+        buffer[SIMPLE_TEST_MESSAGE.len()] = b'\n';
+        buffer[(SIMPLE_TEST_MESSAGE.len() + 1)..].copy_from_slice(SIMPLE_TEST_MESSAGE);
+
+        let (input, message) = Message::parse(&buffer).unwrap();
+        assert_eq!(
+            message,
+            Message {
+                timestamp: Timestamp {
+                    inner: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
+                        NaiveTime::from_hms_opt(1, 2, 3).unwrap()
+                    )
+                },
+                sender: ChatParticipant {
+                    name: "LetsMelon".to_string()
+                },
+                message_type: MessageType::Text("Hello World!".to_string())
+            }
+        );
+
+        let (input, message) = Message::parse(&input).unwrap();
+        assert_eq!(input, b"");
+        assert_eq!(
+            message,
+            Message {
+                timestamp: Timestamp {
+                    inner: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
+                        NaiveTime::from_hms_opt(1, 2, 3).unwrap()
+                    )
+                },
+                sender: ChatParticipant {
+                    name: "LetsMelon".to_string()
+                },
+                message_type: MessageType::Text("Hello World!".to_string())
+            }
+        );
+    }
+}

@@ -18,3 +18,20 @@ impl ChatParticipant {
         &self.name
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::chat_participant::ChatParticipant;
+
+    #[test]
+    fn just_works() {
+        let (input, chat_participant) = ChatParticipant::parse(b"LetsMelon: Hello World!").unwrap();
+        assert_eq!(input, b": Hello World!");
+        assert_eq!(
+            chat_participant,
+            ChatParticipant {
+                name: "LetsMelon".to_string()
+            }
+        );
+    }
+}
