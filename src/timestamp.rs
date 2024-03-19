@@ -1,9 +1,9 @@
 use chrono::{Datelike, NaiveDateTime, Timelike};
-use nom::bytes::complete::{tag, take_till, take_while};
+use nom::bytes::complete::{tag, take_while};
 use nom::error::context;
 use nom::multi::separated_list1;
 use nom::sequence::{delimited, separated_pair};
-use nom::{AsChar, IResult};
+use nom::IResult;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct Timestamp {
@@ -109,5 +109,11 @@ mod tests {
                 )
             }
         )
+    }
+
+    #[test]
+    fn cant_parse() {
+        let out = Timestamp::parse(b"[08:58, 12.12.2018]");
+        assert!(out.is_err());
     }
 }
