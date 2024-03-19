@@ -1,5 +1,5 @@
 use nom::bytes::complete::tag;
-use nom::character::complete::space1;
+use nom::character::complete::{line_ending, space1};
 use nom::combinator::{map, opt};
 use nom::sequence::terminated;
 use nom::IResult;
@@ -24,7 +24,7 @@ impl Message {
 
         let (input, timestamp) = terminated(Timestamp::parse, space1)(input)?;
         let (input, sender) = terminated(ChatParticipant::parse, tag(": "))(input)?;
-        let (input, message_type) = terminated(MessageType::parse, opt(tag("\n")))(input)?;
+        let (input, message_type) = terminated(MessageType::parse, opt(line_ending))(input)?;
 
         // TODO return error with an better error message
         // assert!(
