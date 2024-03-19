@@ -10,6 +10,7 @@ use crate::message_type::MessageType;
 use crate::timestamp::Timestamp;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Message {
     pub(crate) timestamp: Timestamp,
     pub(crate) sender: ChatParticipant,

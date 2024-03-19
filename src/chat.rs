@@ -8,6 +8,7 @@ use crate::message::Message;
 use crate::message_type::MessageType;
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Chat {
     messages: Vec<Message>,
 }

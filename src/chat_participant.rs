@@ -3,6 +3,7 @@ use nom::combinator::map;
 use nom::IResult;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ChatParticipant {
     pub(crate) name: String,
 }

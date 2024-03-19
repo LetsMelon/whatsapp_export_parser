@@ -6,6 +6,7 @@ use nom::sequence::{delimited, separated_pair};
 use nom::IResult;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Timestamp {
     year: i32,
     month: u32,
