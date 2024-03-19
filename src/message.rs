@@ -20,13 +20,10 @@ impl Message {
     pub(crate) const MARKER: [u8; 3] = [0xE2, 0x80, 0x8E];
 
     pub(crate) fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (input, image_or_document_marker) = opt(map(tag(Self::MARKER), |_| ()))(input)?;
-
-        dbg!(image_or_document_marker);
+        let (input, _image_or_document_marker) = opt(map(tag(Self::MARKER), |_| ()))(input)?;
 
         let (input, timestamp) = terminated(Timestamp::parse, space1)(input)?;
         let (input, sender) = terminated(ChatParticipant::parse, tag(": "))(input)?;
-
         let (input, message_type) = terminated(MessageType::parse, opt(tag("\n")))(input)?;
 
         // TODO return error with an better error message
