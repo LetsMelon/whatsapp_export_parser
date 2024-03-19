@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use chrono::NaiveDateTime;
+use chrono::{Datelike, NaiveDateTime, Timelike};
 use nom::bytes::complete::{tag, take_until, take_while};
 use nom::character::complete::space1;
 use nom::combinator::{map, opt};
@@ -18,6 +18,10 @@ impl ChatParticipant {
         map(take_until(":"), |item: &str| ChatParticipant {
             name: item.to_string(),
         })(input)
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 
@@ -45,6 +49,30 @@ impl Timestamp {
                 inner: NaiveDateTime::parse_from_str(ts_raw, "%d.%m.%y, %H:%M:%S").unwrap(), // TODO return proper error
             },
         ))
+    }
+
+    /// Get the year, month and day of the `Timestamp`
+    ///
+    /// Month and day starts at 1.
+    pub fn ymd(&self) -> (i32, u32, u32) {
+        let date = self.inner.date();
+
+        let year = date.year();
+        let month = date.month0() + 1;
+        let day = date.day0() + 1;
+
+        (year, month, day)
+    }
+
+    /// Get the hours, minutes and seconds of the `Timestamp`
+    pub fn hms(&self) -> (u32, u32, u32) {
+        let time = self.inner.time();
+
+        let hour = time.hour();
+        let minutes = time.minute();
+        let seconds = time.second();
+
+        (hour, minutes, seconds)
     }
 }
 
@@ -78,6 +106,21 @@ impl Message {
                 message_type: MessageType::Text(msg.to_string()),
             },
         ))
+    }
+
+    /// Returns the timestamp as `Timestamp`
+    pub fn timestamp(&self) -> &Timestamp {
+        &self.timestamp
+    }
+
+    /// Returns the sender as `ChatParticipant`
+    pub fn sender(&self) -> &ChatParticipant {
+        &self.sender
+    }
+
+    /// Returns the message data as `MessageType`
+    pub fn message_type(&self) -> &MessageType {
+        &self.message_type
     }
 }
 
@@ -120,6 +163,11 @@ impl Chat {
         reader.read_to_string(&mut raw).map_err(|_| ())?;
 
         Self::parse(&raw)
+    }
+
+    /// Get all messages as `Message` of the `Chat`
+    pub fn messages(&self) -> &[Message] {
+        &self.messages
     }
 }
 
