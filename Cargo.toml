@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.35"
+either = "1.10.0"
 nom = "7.1.3"
 thiserror = "1.0.58"

@@ -1,4 +1,5 @@
-use nom::bytes::complete::tag;
+use either::Either;
+use nom::bytes::complete::{tag, take_till};
 use nom::character::complete::{line_ending, space1};
 use nom::combinator::{map, opt};
 use nom::sequence::terminated;
@@ -19,28 +20,41 @@ impl Message {
     /// marker symbol UTF-32 `U+200E`
     pub(crate) const MARKER: [u8; 3] = [0xE2, 0x80, 0x8E];
 
-    pub(crate) fn parse(input: &[u8]) -> IResult<&[u8], Self> {
+    pub(crate) fn parse(input: &[u8]) -> IResult<&[u8], Either<Self, String>> {
         let (input, _image_or_document_marker) = opt(map(tag(Self::MARKER), |_| ()))(input)?;
 
-        let (input, timestamp) = terminated(Timestamp::parse, space1)(input)?;
-        let (input, sender) = terminated(ChatParticipant::parse, tag(": "))(input)?;
-        let (input, message_type) = terminated(MessageType::parse, opt(line_ending))(input)?;
+        let (input, timestamp) = opt(terminated(Timestamp::parse, space1))(input)?;
 
-        // TODO return error with an better error message
-        // assert!(
-        //     (matches!(message_type, MessageType::Image)
-        //         || matches!(message_type, MessageType::Document(_)))
-        //         && image_or_document_marker.is_some(), "The parsed parsed the line as 'MessageType::Image' or 'MessageType::Document' although the marker at the beginning of the line was missing"
-        // );
+        if let Some(timestamp) = timestamp {
+            let (input, sender) = terminated(ChatParticipant::parse, tag(": "))(input)?;
+            let (input, message_type) = terminated(MessageType::parse, opt(line_ending))(input)?;
 
-        Ok((
-            input,
-            Message {
-                timestamp,
-                sender,
-                message_type,
-            },
-        ))
+            // TODO return error with an better error message
+            // assert!(
+            //     (matches!(message_type, MessageType::Image)
+            //         || matches!(message_type, MessageType::Document(_)))
+            //         && image_or_document_marker.is_some(), "The parsed parsed the line as 'MessageType::Image' or 'MessageType::Document' although the marker at the beginning of the line was missing"
+            // );
+
+            Ok((
+                input,
+                Either::Left(Message {
+                    timestamp,
+                    sender,
+                    message_type,
+                }),
+            ))
+        } else {
+            let (input, text) = terminated(
+                // TODO maybe there is a better way to read until the end of the line
+                map(take_till(|c| c == b'\n' || c == b'\r'), |raw: &[u8]| {
+                    String::from_utf8(raw.to_vec()).unwrap()
+                }),
+                opt(line_ending),
+            )(input)?;
+
+            Ok((input, Either::Right(text)))
+        }
     }
 
     /// Returns the timestamp as `Timestamp`
@@ -62,6 +76,7 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+    use either::Either;
 
     use crate::chat_participant::ChatParticipant;
     use crate::message::Message;
@@ -75,7 +90,7 @@ mod tests {
         assert_eq!(input, b"");
         assert_eq!(
             message,
-            Message {
+            Either::Left(Message {
                 timestamp: Timestamp {
                     inner: NaiveDateTime::new(
                         NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
@@ -86,7 +101,7 @@ mod tests {
                     name: "LetsMelon".to_string()
                 },
                 message_type: MessageType::Text("Hello World!".to_string())
-            }
+            })
         );
     }
 
@@ -100,7 +115,7 @@ mod tests {
         let (input, message) = Message::parse(&buffer).unwrap();
         assert_eq!(
             message,
-            Message {
+            Either::Left(Message {
                 timestamp: Timestamp {
                     inner: NaiveDateTime::new(
                         NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
@@ -111,14 +126,14 @@ mod tests {
                     name: "LetsMelon".to_string()
                 },
                 message_type: MessageType::Text("Hello World!".to_string())
-            }
+            })
         );
 
         let (input, message) = Message::parse(&input).unwrap();
         assert_eq!(input, b"");
         assert_eq!(
             message,
-            Message {
+            Either::Left(Message {
                 timestamp: Timestamp {
                     inner: NaiveDateTime::new(
                         NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
@@ -129,7 +144,7 @@ mod tests {
                     name: "LetsMelon".to_string()
                 },
                 message_type: MessageType::Text("Hello World!".to_string())
-            }
+            })
         );
     }
 }

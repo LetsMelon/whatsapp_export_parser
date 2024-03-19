@@ -1,7 +1,9 @@
 use chrono::{Datelike, NaiveDateTime, Timelike};
-use nom::bytes::complete::{tag, take_while};
-use nom::sequence::delimited;
-use nom::IResult;
+use nom::bytes::complete::{tag, take_till, take_while};
+use nom::error::context;
+use nom::multi::separated_list1;
+use nom::sequence::{delimited, separated_pair};
+use nom::{AsChar, IResult};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct Timestamp {
@@ -12,24 +14,52 @@ pub struct Timestamp {
 
 impl Timestamp {
     pub(crate) fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        const DELIMITER_START: char = '[';
-        const DELIMITER_END: char = ']';
+        const DELIMITER_START: u8 = b'[';
+        const DELIMITER_END: u8 = b']';
 
-        let (input, ts_raw) = delimited(
-            tag(DELIMITER_START.to_string().as_str()), // TODO maybe remove the `.to_string()` call
-            take_while(|item| item != DELIMITER_END as u8),
-            tag(DELIMITER_END.to_string().as_str()), // TODO maybe remove the `.to_string()` call
+        let (input, (raw_date, raw_time)) = delimited(
+            tag([DELIMITER_START]),
+            separated_pair(
+                context(
+                    "date",
+                    separated_list1(tag("."), take_while(|c| char::is_ascii_digit(&(c as char)))),
+                ),
+                tag(", "),
+                context(
+                    "time",
+                    separated_list1(tag(":"), take_while(|c| char::is_ascii_digit(&(c as char)))),
+                ),
+            ),
+            tag([DELIMITER_END]),
         )(input)?;
+
+        // TODO remove this asserts, maybe there is way to check via nom if the parser was able to 'run' x amount of time
+        assert!(raw_date.len() == 3);
+        assert!(raw_time.len() == 3);
+
+        let raw_date = raw_date
+            .iter()
+            .map(|raw| String::from_utf8_lossy(&raw))
+            .collect::<Vec<_>>()
+            .join(".");
+
+        let raw_time = raw_time
+            .iter()
+            .map(|raw| String::from_utf8_lossy(&raw))
+            .collect::<Vec<_>>()
+            .join(":");
+
+        let raw_datetime = format!("{raw_date}, {raw_time}");
 
         Ok((
             input,
             Timestamp {
-                inner: NaiveDateTime::parse_from_str(
-                    // TODO remove to vec
-                    &String::from_utf8(ts_raw.to_vec()).unwrap(),
-                    "%d.%m.%y, %H:%M:%S",
-                )
-                .unwrap(), // TODO return proper error
+                inner: NaiveDateTime::parse_from_str(&raw_datetime, "%d.%m.%y, %H:%M:%S")
+                    .map_err(|err| {
+                        eprintln!("input: {:?}", raw_datetime);
+                        err
+                    })
+                    .unwrap(), // TODO return proper error
             },
         ))
     }

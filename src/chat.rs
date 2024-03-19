@@ -1,9 +1,11 @@
 use std::io::{BufRead, BufReader, Read};
 
+use either::Either;
 use nom::multi::many1;
 use nom::IResult;
 
 use crate::message::Message;
+use crate::message_type::MessageType;
 
 #[derive(Debug)]
 pub struct Chat {
@@ -15,6 +17,27 @@ impl Chat {
     pub fn parse(input: &[u8]) -> Result<Self, ()> {
         fn parse_internal(input: &[u8]) -> IResult<&[u8], Chat> {
             let (input, messages) = many1(Message::parse)(input)?;
+
+            // TODO refactor into separate function
+            let messages = messages.iter().fold(Vec::new(), |mut acc, item| {
+                match item {
+                    Either::Left(msg) => acc.push(msg.clone()),
+                    Either::Right(text) => {
+                        let msg = acc.last_mut() .expect( &format!("Error in parsing. This error can only happen if no line has been parsed as an message.\ntext:{text:?}") );
+                        match &mut msg.message_type {
+                            MessageType::Text(old_text) => {
+                                old_text.push_str("\n");
+                                old_text.push_str(&text);
+                            }
+                            _ => panic!(
+                                "A new line for a text is only supported if the message is a text."
+                            ),
+                        };
+                    }
+                };
+    
+                acc
+            });
 
             Ok((input, Chat { messages }))
         }
@@ -49,7 +72,11 @@ impl Chat {
             let line = line.map_err(|_| ())?;
 
             let (input, message) = Message::parse(line.as_bytes()).map_err(|err| {
-                eprintln!("encountered an error while parsing: {err:?}");
+                let err = err.map(|item| (item.code, String::from_utf8_lossy(item.input)));
+
+                eprintln!("encountered an error while parsing: {:?}", err);
+                eprintln!("Line: {:#04X?}", line.as_bytes());
+
                 ()
             })?;
 
@@ -63,6 +90,26 @@ impl Chat {
 
             messages.push(message);
         }
+
+        let messages = messages.iter().fold(Vec::new(), |mut acc, item| {
+            match item {
+                Either::Left(msg) => acc.push(msg.clone()),
+                Either::Right(text) => {
+                    let msg = acc.last_mut() .expect( &format!("Error in parsing. This error can only happen if no line has been parsed as an message.\ntext:{text:?}") );
+                    match &mut msg.message_type {
+                        MessageType::Text(old_text) => {
+                            old_text.push_str("\n");
+                            old_text.push_str(&text);
+                        }
+                        _ => panic!(
+                            "A new line for a text is only supported if the message is a text."
+                        ),
+                    };
+                }
+            };
+
+            acc
+        });
 
         Ok(Chat { messages })
     }
