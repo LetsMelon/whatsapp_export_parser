@@ -16,7 +16,7 @@ pub struct Message {
 }
 
 impl Message {
-    // marker symbol 'U+200E'
+    /// marker symbol UTF-32 `U+200E`
     pub(crate) const MARKER: [u8; 3] = [0xE2, 0x80, 0x8E];
 
     pub(crate) fn parse(input: &[u8]) -> IResult<&[u8], Self> {
