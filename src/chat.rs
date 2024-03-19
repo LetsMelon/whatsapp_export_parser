@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{BufRead, BufReader, Read};
 
 use nom::multi::many1;
 use nom::IResult;
@@ -11,15 +11,15 @@ pub struct Chat {
 }
 
 impl Chat {
-    fn parse_internal(input: &[u8]) -> IResult<&[u8], Self> {
-        let (input, messages) = many1(Message::parse)(input)?;
-
-        Ok((input, Chat { messages }))
-    }
-
     // TODO proper error handling
     pub fn parse(input: &[u8]) -> Result<Self, ()> {
-        match Self::parse_internal(input) {
+        fn parse_internal(input: &[u8]) -> IResult<&[u8], Chat> {
+            let (input, messages) = many1(Message::parse)(input)?;
+
+            Ok((input, Chat { messages }))
+        }
+
+        match parse_internal(input) {
             Ok((input, chat)) => {
                 if input.len() == 0 {
                     Ok(chat)
@@ -39,14 +39,32 @@ impl Chat {
     }
 
     // TODO proper error handling
-    pub fn parse_from_reader<R: Read>(mut reader: R) -> Result<Self, ()> {
-        // TODO use a way where the whole reader doesn't need to be read into memory before parsing
+    pub fn parse_from_reader<R: Read>(reader: R) -> Result<Self, ()> {
+        let reader = BufReader::new(reader);
 
-        let mut raw = Vec::with_capacity(1024);
-        // TODO proper error handling
-        reader.read_to_end(&mut raw).map_err(|_| ())?;
+        let mut messages = Vec::new();
 
-        Self::parse(&raw)
+        for line in reader.lines() {
+            // TODO proper error handling
+            let line = line.map_err(|_| ())?;
+
+            let (input, message) = Message::parse(line.as_bytes()).map_err(|err| {
+                eprintln!("encountered an error while parsing: {err:?}");
+                ()
+            })?;
+
+            if !input.is_empty() {
+                eprintln!(
+                    "The input.len() should be zero, couldn't parsed: {:?}",
+                    String::from_utf8_lossy(input)
+                );
+                return Err(());
+            }
+
+            messages.push(message);
+        }
+
+        Ok(Chat { messages })
     }
 
     /// Get all messages as `Message` of the `Chat`
