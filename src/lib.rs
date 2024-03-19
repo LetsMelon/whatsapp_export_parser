@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use chrono::NaiveDateTime;
 use nom::bytes::complete::{tag, take_until, take_while};
 use nom::character::complete::space1;
@@ -107,6 +109,17 @@ impl Chat {
                 Err(())
             }
         }
+    }
+
+    // TODO proper error handling
+    pub fn parse_from_reader<R: Read>(mut reader: R) -> Result<Self, ()> {
+        // TODO use a way where the whole reader doesn't need to be read into memory before parsing
+
+        let mut raw = String::with_capacity(1024);
+        // TODO proper error handling
+        reader.read_to_string(&mut raw).map_err(|_| ())?;
+
+        Self::parse(&raw)
     }
 }
 
