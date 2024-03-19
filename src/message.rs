@@ -1,8 +1,7 @@
-use nom::branch::alt;
-use nom::bytes::complete::{tag, take_while};
-use nom::character::complete::{space0, space1};
+use nom::bytes::complete::tag;
+use nom::character::complete::space1;
 use nom::combinator::{map, opt};
-use nom::sequence::{preceded, separated_pair, terminated, tuple};
+use nom::sequence::terminated;
 use nom::IResult;
 
 use crate::chat_participant::ChatParticipant;
@@ -17,59 +16,18 @@ pub struct Message {
 }
 
 impl Message {
-    pub(crate) fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        // marker symbol 'U+200E'
-        const MARKER: [u8; 3] = [0xE2, 0x80, 0x8E];
+    // marker symbol 'U+200E'
+    pub(crate) const MARKER: [u8; 3] = [0xE2, 0x80, 0x8E];
 
-        let (input, image_or_document_marker) = opt(map(tag(MARKER), |_| ()))(input)?;
+    pub(crate) fn parse(input: &[u8]) -> IResult<&[u8], Self> {
+        let (input, image_or_document_marker) = opt(map(tag(Self::MARKER), |_| ()))(input)?;
 
         dbg!(image_or_document_marker);
 
         let (input, timestamp) = terminated(Timestamp::parse, space1)(input)?;
         let (input, sender) = terminated(ChatParticipant::parse, tag(": "))(input)?;
 
-        let (input, message_type) = terminated(
-            alt((
-                map(
-                    separated_pair(
-                        take_while(|item| item != b' '),
-                        tuple((space0, map(tag(MARKER), |_: &[u8]| ()))),
-                        tag("document omitted"),
-                    ),
-                    |(items, _)| MessageType::Document(String::from_utf8(items.to_vec()).unwrap()),
-                ),
-                map(
-                    tuple((
-                        space0,
-                        map(tag(MARKER), |_: &[u8]| ()),
-                        tag("image omitted"),
-                    )),
-                    |_| MessageType::Image,
-                ),
-                map(
-                    preceded(
-                        tuple((space0, map(tag(MARKER), |_: &[u8]| ()), tag("Location: "))),
-                        take_while(|c| c != b'\n'),
-                    ),
-                    |raw_location: &[u8]| {
-                        MessageType::Location(String::from_utf8(raw_location.to_vec()).unwrap())
-                    },
-                ),
-                map(
-                    preceded(
-                        tuple((space0, map(tag(MARKER), |_: &[u8]| ()))),
-                        take_while(|c| c != b'\n'),
-                    ),
-                    |raw: &[u8]| {
-                        MessageType::InternalMessage(String::from_utf8(raw.to_vec()).unwrap())
-                    },
-                ),
-                map(take_while(|c| c != b'\n'), |raw_text: &[u8]| {
-                    MessageType::Text(String::from_utf8(raw_text.to_vec()).unwrap())
-                }),
-            )),
-            opt(tag("\n")),
-        )(input)?;
+        let (input, message_type) = terminated(MessageType::parse, opt(tag("\n")))(input)?;
 
         // TODO return error with an better error message
         // assert!(
