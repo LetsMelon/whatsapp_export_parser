@@ -91,12 +91,10 @@ mod tests {
         assert_eq!(
             message,
             Either::Left(Message {
-                timestamp: Timestamp {
-                    inner: NaiveDateTime::new(
-                        NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
-                        NaiveTime::from_hms_opt(1, 2, 3).unwrap()
-                    )
-                },
+                timestamp: Timestamp::from_naive_date_time(NaiveDateTime::new(
+                    NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
+                    NaiveTime::from_hms_opt(1, 2, 3).unwrap()
+                )),
                 sender: ChatParticipant {
                     name: "LetsMelon".to_string()
                 },
@@ -116,12 +114,10 @@ mod tests {
         assert_eq!(
             message,
             Either::Left(Message {
-                timestamp: Timestamp {
-                    inner: NaiveDateTime::new(
-                        NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
-                        NaiveTime::from_hms_opt(1, 2, 3).unwrap()
-                    )
-                },
+                timestamp: Timestamp::from_naive_date_time(NaiveDateTime::new(
+                    NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
+                    NaiveTime::from_hms_opt(1, 2, 3).unwrap()
+                )),
                 sender: ChatParticipant {
                     name: "LetsMelon".to_string()
                 },
@@ -134,12 +130,10 @@ mod tests {
         assert_eq!(
             message,
             Either::Left(Message {
-                timestamp: Timestamp {
-                    inner: NaiveDateTime::new(
-                        NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
-                        NaiveTime::from_hms_opt(1, 2, 3).unwrap()
-                    )
-                },
+                timestamp: Timestamp::from_naive_date_time(NaiveDateTime::new(
+                    NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
+                    NaiveTime::from_hms_opt(1, 2, 3).unwrap()
+                )),
                 sender: ChatParticipant {
                     name: "LetsMelon".to_string()
                 },

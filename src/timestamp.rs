@@ -7,12 +7,36 @@ use nom::IResult;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct Timestamp {
-    // ? with that the inner value is private,
-    // ? I don't want to the dependency on `chrono` pub
-    pub(crate) inner: NaiveDateTime,
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
 }
 
 impl Timestamp {
+    pub(crate) fn from_naive_date_time(naive_date_time: NaiveDateTime) -> Self {
+        let date = naive_date_time.date();
+        let year = date.year();
+        let month = date.month0();
+        let day = date.day0();
+
+        let time = naive_date_time.time();
+        let hour = time.hour();
+        let minute = time.minute();
+        let second = time.second();
+
+        Self {
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second,
+        }
+    }
+
     pub(crate) fn parse(input: &[u8]) -> IResult<&[u8], Self> {
         const DELIMITER_START: u8 = b'[';
         const DELIMITER_END: u8 = b']';
@@ -53,39 +77,28 @@ impl Timestamp {
 
         Ok((
             input,
-            Timestamp {
-                inner: NaiveDateTime::parse_from_str(&raw_datetime, "%d.%m.%y, %H:%M:%S")
+            Timestamp::from_naive_date_time(
+                NaiveDateTime::parse_from_str(&raw_datetime, "%d.%m.%y, %H:%M:%S")
                     .map_err(|err| {
                         eprintln!("input: {:?}", raw_datetime);
                         err
                     })
-                    .unwrap(), // TODO return proper error
-            },
+                    // TODO return proper error
+                    .unwrap(),
+            ),
         ))
     }
 
     /// Get the year, month and day of the `Timestamp`
     ///
-    /// Month and day starts at 1.
+    /// Month and day starts at 0.
     pub fn ymd(&self) -> (i32, u32, u32) {
-        let date = self.inner.date();
-
-        let year = date.year();
-        let month = date.month0() + 1;
-        let day = date.day0() + 1;
-
-        (year, month, day)
+        (self.year, self.month, self.day)
     }
 
     /// Get the hours, minutes and seconds of the `Timestamp`
     pub fn hms(&self) -> (u32, u32, u32) {
-        let time = self.inner.time();
-
-        let hour = time.hour();
-        let minutes = time.minute();
-        let seconds = time.second();
-
-        (hour, minutes, seconds)
+        (self.hour, self.minute, self.second)
     }
 }
 
@@ -102,12 +115,10 @@ mod tests {
         assert_eq!(input, b" LetsMelon: Hello World!");
         assert_eq!(
             ts,
-            Timestamp {
-                inner: NaiveDateTime::new(
-                    NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
-                    NaiveTime::from_hms_opt(1, 2, 3).unwrap()
-                )
-            }
+            Timestamp::from_naive_date_time(NaiveDateTime::new(
+                NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(),
+                NaiveTime::from_hms_opt(1, 2, 3).unwrap()
+            ))
         )
     }
 
